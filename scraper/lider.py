@@ -32,10 +32,14 @@ def buscar_productos(query):
     try:
         res = requests.get(url, headers=HEADERS, timeout=10)
         print(f"Status code: {res.status_code}")
-        data = res.json()
-        print(f"Keys en respuesta: {list(data.keys())}")
-        print(f"Respuesta completa (primeros 500 chars): {str(data)[:500]}")
-        return data.get("products", [])
+        print(f"Respuesta raw (primeros 300 chars): {res.text[:300]}")
+        try:
+            data = res.json()
+            print(f"Keys en respuesta: {list(data.keys())}")
+            return data.get("products", [])
+        except Exception as je:
+            print(f"No es JSON válido: {je}")
+            return []
     except Exception as e:
         print(f"Error buscando {query}: {e}")
         return []
