@@ -31,7 +31,10 @@ def buscar_productos(query):
     url = f"https://www.lider.cl/supermercado/product/search?query={query}&page=0&count=20"
     try:
         res = requests.get(url, headers=HEADERS, timeout=10)
+        print(f"Status code: {res.status_code}")
         data = res.json()
+        print(f"Keys en respuesta: {list(data.keys())}")
+        print(f"Respuesta completa (primeros 500 chars): {str(data)[:500]}")
         return data.get("products", [])
     except Exception as e:
         print(f"Error buscando {query}: {e}")
