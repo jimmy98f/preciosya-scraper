@@ -5,52 +5,48 @@ from datetime import datetime
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
-SUPERMERCADO_ID = 1
+SUPERMERCADO_ID = 2  # Jumbo
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 CATEGORIAS = ["aceite", "arroz", "leche", "pan", "azucar", "fideos", "detergente", "shampoo", "yogurt", "jugo"]
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15",
-    "Accept": "application/json",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "application/json, text/plain, */*",
     "Accept-Language": "es-CL,es;q=0.9",
-    "Referer": "https://www.lider.cl/",
 }
 
 def buscar_productos(query):
-    url = f"https://apps.lider.cl/catalogo/bff/products/search?query={query}&start=0&count=20"
+    url = f"https://www.jumbo.cl/api/catalog_system/pub/products/search/{query}?O=OrderByScoreDESC&_from=0&_to=19"
     try:
         res = requests.get(url, headers=HEADERS, timeout=15)
         print(f"Status: {res.status_code} — query: {query}")
         print(f"Raw (200 chars): {res.text[:200]}")
-        data = res.json()
-        productos = data.get("data", {}).get("products", []) or data.get("products", [])
+        productos = res.json()
         print(f"Productos encontrados: {len(productos)}")
-        return productos
+        return productos if isinstance(productos, list) else []
     except Exception as e:
         print(f"Error en {query}: {e}")
         return []
 
 def guardar_precio(producto_raw):
     try:
-        nombre = (producto_raw.get("displayName") or producto_raw.get("name") or "").strip()
-        marca = producto_raw.get("brand", "") or ""
+        nombre = producto_raw.get("productName", "").strip()
+        marca = producto_raw.get("brand", "")
+        categoria = producto_raw.get("categories", [""])[0].replace("/", "").strip() if producto_raw.get("categories") else ""
+        
         imagen = ""
-        imagenes = producto_raw.get("images", [])
-        if imagenes:
-            imagen = imagenes[0].get("url", "") if isinstance(imagenes[0], dict) else str(imagenes[0])
-        categoria = producto_raw.get("category", "") or ""
+        items = producto_raw.get("items", [])
+        if items and items[0].get("images"):
+            imagen = items[0]["images"][0].get("imageUrl", "")
 
         precio = None
-        precio_raw = producto_raw.get("price", {}) or {}
-        if isinstance(precio_raw, dict):
-            precio = precio_raw.get("BasePriceSales") or precio_raw.get("BasePriceReference") or precio_raw.get("price")
-        elif isinstance(precio_raw, (int, float)):
-            precio = precio_raw
-
-        if not precio:
-            precio = producto_raw.get("price") or producto_raw.get("precio")
+        if items:
+            sellers = items[0].get("sellers", [])
+            if sellers:
+                precio_raw = sellers[0].get("commertialOffer", {})
+                precio = precio_raw.get("Price") or precio_raw.get("ListPrice")
 
         if not nombre or not precio:
             return
@@ -88,13 +84,13 @@ def guardar_precio(producto_raw):
         print(f"Error guardando: {e} — data: {str(producto_raw)[:100]}")
 
 def main():
-    print(f"🛒 Iniciando scraper Lider — {datetime.now()}")
+    print(f"🛒 Iniciando scraper Jumbo — {datetime.now()}")
     for categoria in CATEGORIAS:
         print(f"\n🔍 Buscando: {categoria}")
         productos = buscar_productos(categoria)
         for p in productos:
             guardar_precio(p)
-    print("\n✅ Scraper Lider finalizado")
+    print("\n✅ Scraper Jumbo finalizado")
 
 if __name__ == "__main__":
     main()
